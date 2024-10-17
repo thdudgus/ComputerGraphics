@@ -19,6 +19,8 @@ glm::vec4 pvMatrixID; // vertex shader에서 mPVM으로 넘겨줄 uniform variable의 ID
 
 GLuint pvmMatrixID;
 
+float updown = 0.0f;
+
 float rotAngle = 0.0f;  // 큐브를 돌리기 위해 로테이션 각을 계산
 int isDrawingCar = false;
 
@@ -146,7 +148,6 @@ void drawCar(glm::mat4 carMat)
 {
 	glm::mat4 modelMat, pvmMat;
 	glm::vec3 uppperLegPos[2];
-	glm::vec3 lowerLegPos[2];
 	glm::vec3 ArmPos[2];
 
 	float legZOffset = -0.5f; // 힙 조인트의 z 좌표
@@ -155,26 +156,25 @@ void drawCar(glm::mat4 carMat)
 
 	// 위쪽 y, 오른쪽 x, view쪽은 z
 	// 뒤로 보내려면 x를 증가시키면 됨. 오른쪽으로 가려면 y를 증가시키고, 아래쪽으로 가려면 z를 negative
-	// Leg
-	uppperLegPos[0] = glm::vec3(0, 0.15, -0.5); // left upper leg 
-	uppperLegPos[1] = glm::vec3(0, -0.15, -0.5); // right upper leg
-	lowerLegPos[0] = glm::vec3(0, 0.15, -1); // left lower leg
-	lowerLegPos[1] = glm::vec3(0, -0.15, -1); // right lower leg
-	// Arm
-	ArmPos[0] = glm::vec3(0, 0.5, 0.2); // left upper arm (로봇 기준)
-	ArmPos[1] = glm::vec3(0, -0.5, 0.2); // right upper arm
+	// Leg position
+	uppperLegPos[0] = glm::vec3(0, 0.15, -0.7); // left upper leg 
+	uppperLegPos[1] = glm::vec3(0, -0.15, -0.7); // right upper leg
+	// Arm position
+	ArmPos[0] = glm::vec3(0, 0.5, 0.1); // left upper arm (로봇 기준)
+	ArmPos[1] = glm::vec3(0, -0.5, 0.1); // right upper arm
 
 	// forearm의 회전 각도
 	float forearmAngle = glm::radians(-45.0f); // -45도를 라디안으로 변환
 
 	// body
-	modelMat = glm::scale(carMat, glm::vec3(0.7, 0.8, 0.9)); // 초기 코드 (1, 0.6, 1.2), scailing, y가 몸통 가로폭
+	modelMat = glm::translate(carMat, glm::vec3(0, 0, 0 + updown * 0.5)); // 위아래 이동 추가
+	modelMat = glm::scale(modelMat, glm::vec3(0.7, 0.8, 0.9)); // 초기 코드 (1, 0.6, 1.2), scailing, y가 몸통 가로폭
 	pvmMat = projectMat * viewMat * modelMat;
 	glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
 	glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
 	// head
-	modelMat = glm::translate(carMat, glm::vec3(0, 0, 0.7));  // 초기 코드 (0, 0, 0.2), tranlation, 순서 : Projection * View * CarMat * Translation * Scailing * vertex
+	modelMat = glm::translate(carMat, glm::vec3(0, 0, 0.7 + updown * 0.5));  // 초기 코드 (0, 0, 0.2), tranlation, 순서 : Projection * View * CarMat * Translation * Scailing * vertex
 	modelMat = glm::scale(modelMat, glm::vec3(0.5, 0.5, 0.4));  // 
 	pvmMat = projectMat * viewMat * modelMat;
 	glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
@@ -318,14 +318,14 @@ void idle()
 		rotAngle += glm::radians(t * 360.0f / 10000.0f);
 
 		float timeInSeconds = currTime / 1000.0f;
-		float maxAngleDegrees = 60.0f;
-		float frequency = 8.0f;  // 속도 조절
+		float maxAngleDegrees = 60.0f;  // 팔 최대 각도
+		float frequency = 10.0f;  // 속도 조절
 
 		// 팔 각도 계산
 		armAngle = glm::radians(maxAngleDegrees * sin(frequency * timeInSeconds));
 
-		// 다리 각도 계산
-		float maxLegAngleDegrees = 45.0f;
+		// 다리 최대 각도 계산
+		float maxLegAngleDegrees = 60.0f;
 
 		// 왼쪽과 오른쪽 다리의 각도를 반대 위상으로 설정
 		legAngle[0] = glm::radians(maxLegAngleDegrees * sin(frequency * timeInSeconds));
@@ -336,6 +336,10 @@ void idle()
 		// 절대값을 사용하여 무릎이 한 방향으로만 회전하도록 설정
 		kneeAngle[0] = glm::radians(maxKneeAngleDegrees * abs(sin(frequency * timeInSeconds)));
 		kneeAngle[1] = glm::radians(maxKneeAngleDegrees * abs(sin(frequency * timeInSeconds + glm::pi<float>())));
+
+		// 머리 위 아래 계산
+		float headAmplitude = 0.1f; // Maximum displacement
+		updown = headAmplitude * sin(frequency * timeInSeconds);
 
 		prevTime = currTime;
 		glutPostRedisplay();

@@ -11,7 +11,6 @@
 #include "glm/gtx/transform.hpp"
 #include "texture.hpp"
 
-
 // glm::mat4가 4*4 행렬을 정의할 수 있게 함.
 glm::mat4 projectMat;
 glm::mat4 viewMat;
@@ -156,13 +155,37 @@ init()
     glEnableVertexAttribArray(vNormal);
     glVertexAttribPointer(vNormal, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
 
-    //GLuint vColor = glGetAttribLocation(program, "vColor");  // vertex color
-    //glEnableVertexAttribArray(vColor);
-    //glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0,   BUFFER_OFFSET(sizeof(points)));
+    GLuint vColor = glGetAttribLocation(program, "vColor");  // vertex color
+    glEnableVertexAttribArray(vColor);
+    glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
 
     GLuint vTexCoord = glGetAttribLocation(program, "vTexCoord");
     glEnableVertexAttribArray(vTexCoord);
     glVertexAttribPointer(vTexCoord, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points) + sizeof(normals)));
+
+    // 투영 행렬을 설정하여 셰이더에 전달
+    //projectMatrixID = glGetUniformLocation(program, "mProject");
+    //projectMat = glm::perspective(glm::radians(65.0f), 1.0f, 0.1f, 100.0f);
+    //glUniformMatrix4fv(projectMatrixID, 1, GL_FALSE, &projectMat[0][0]);
+
+    // 뷰 행렬 설정 및 셰이더에 전달
+    //viewMatrixID = glGetUniformLocation(program, "mView");
+    //viewMat = glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    //glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMat[0][0]);
+
+    //GLuint vModel = glGetAttribLocation(program, "vModel");  // vertex model
+    //glEnableVertexAttribArray(vModel);
+    //glVertexAttribPointer(vModel, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
+
+    // Uniform matrices
+    //projectMatrixID = glGetUniformLocation(program, "mProject");
+    //glUniformMatrix4fv(projectMatrixID, 1, GL_FALSE, &projectMat[0][0]);
+
+    //viewMatrixID = glGetUniformLocation(program, "mView");
+    //glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMat[0][0]);
+
+    //modelMatrixID = glGetUniformLocation(program, "mModel");
+    //glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMat[0][0]);
 
     // 투영 행렬을 설정하여 셰이더에 전달
     projectMatrixID = glGetUniformLocation(program, "mProject");
@@ -174,12 +197,13 @@ init()
     viewMat = glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
     glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMat[0][0]);
 
-    GLuint vModel = glGetAttribLocation(program, "vModel");  // vertex model
-    glEnableVertexAttribArray(vModel);
-    glVertexAttribPointer(vModel, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
+    // 모델 행렬 설정 및 셰이더에 전달
+    modelMatrixID = glGetUniformLocation(program, "mModel");
+    modelMat = glm::mat4(1.0f);
+    glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMat[0][0]);
 
     pvmMatrixID = glGetUniformLocation(program, "mPVM"); // 하나의 오브젝트에 대해 동일한 transformation 적용
-
+    glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &(projectMat * viewMat * modelMat)[0][0]);
 
     // 텍스처 로드 및 적용
     GLuint Texture = loadBMP_custom("stone_surface_texture.bmp");

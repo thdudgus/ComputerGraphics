@@ -10,39 +10,52 @@
 #include "glm/gtc/matrix_transform.hpp"
 #include "glm/gtx/transform.hpp"
 #include "texture.hpp"
+#include "sphere.h"
 
-// glm::mat4°¡ 4*4 Çà·ÄÀ» Á¤ÀÇÇÒ ¼ö ÀÖ°Ô ÇÔ.
+GLuint SPHvao[1];
+GLuint vao;
+
+// glm::mat4ê°€ 4*4 í–‰ë ¬ì„ ì •ì˜í•  ìˆ˜ ìˆê²Œ í•¨.
 glm::mat4 projectMat;
 glm::mat4 viewMat;
 glm::mat4 modelMat;
 
-// º¤ÅÍ¸¦ ÀúÀåÇÒ ¼ö ÀÖ°Ô ÇÔ. 
-glm::vec4 pvMatrixID; // vertex shader¿¡¼­ mPVMÀ¸·Î ³Ñ°ÜÁÙ uniform variableÀÇ ID
+// sphere
+glm::mat4 SPHprojectMat;             // íˆ¬ì˜ í–‰ë ¬
+glm::mat4 SPHviewMat;                // ë·° í–‰ë ¬
+glm::mat4 SPHmodelMat = glm::mat4(1.0f); // ëª¨ë¸ í–‰ë ¬, ê¸°ë³¸ê°’ì€ ë‹¨ìœ„ í–‰ë ¬
+GLuint SPHprojectMatrixID;           // íˆ¬ì˜ í–‰ë ¬ì˜ ì…°ì´ë” ìœ„ì¹˜ ID
+GLuint SPHviewMatrixID;              // ë·° í–‰ë ¬ì˜ ì…°ì´ë” ìœ„ì¹˜ ID
+GLuint SPHmodelMatrixID;             // ëª¨ë¸ í–‰ë ¬ì˜ ì…°ì´ë” ìœ„ì¹˜ ID
+Sphere SPHsphere(50, 50);            // êµ¬ì²´ ìƒì„±, 50x50ì˜ ì„¸ë¶€ ìˆ˜ì¤€ìœ¼ë¡œ ì´ˆê¸°í™”
+
+// ë²¡í„°ë¥¼ ì €ì¥í•  ìˆ˜ ìˆê²Œ í•¨. 
+glm::vec4 pvMatrixID; // vertex shaderì—ì„œ mPVMìœ¼ë¡œ ë„˜ê²¨ì¤„ uniform variableì˜ ID
 
 GLuint pvmMatrixID;
-GLuint projectMatrixID;           // Åõ¿µ Çà·ÄÀÇ ¼ÎÀÌ´õ À§Ä¡ ID
-GLuint viewMatrixID;              // ºä Çà·ÄÀÇ ¼ÎÀÌ´õ À§Ä¡ ID
+GLuint projectMatrixID;           // íˆ¬ì˜ í–‰ë ¬ì˜ ì…°ì´ë” ìœ„ì¹˜ ID
+GLuint viewMatrixID;              // ë·° í–‰ë ¬ì˜ ì…°ì´ë” ìœ„ì¹˜ ID
 GLuint modelMatrixID;
 
 float updown = 0.0f;
 
-float rotAngle = 0.0f;  // Å¥ºê¸¦ µ¹¸®±â À§ÇØ ·ÎÅ×ÀÌ¼Ç °¢À» °è»ê
+float rotAngle = 0.0f;  // íë¸Œë¥¼ ëŒë¦¬ê¸° ìœ„í•´ ë¡œí…Œì´ì…˜ ê°ì„ ê³„ì‚°
 int isDrawingCar = false;
 
-float armAngle = 0.0f; // upper armÀÇ È¸Àü °¢µµ
+float armAngle = 0.0f; // upper armì˜ íšŒì „ ê°ë„
 
-float legAngle[2] = { 0.0f, 0.0f }; // ¿ŞÂÊ°ú ¿À¸¥ÂÊ ´Ù¸®ÀÇ °¢µµ
-float kneeAngle[2] = { 0.0f, 0.0f }; // ¹«¸­ÀÇ °¢µµ
+float legAngle[2] = { 0.0f, 0.0f }; // ì™¼ìª½ê³¼ ì˜¤ë¥¸ìª½ ë‹¤ë¦¬ì˜ ê°ë„
+float kneeAngle[2] = { 0.0f, 0.0f }; // ë¬´ë¦ì˜ ê°ë„
 
 typedef glm::vec4  color4;
 typedef glm::vec4  point4;
 
 const int NumVertices = 36; //(6 faces)(2 triangles/face)(3 vertices/triangle)
 
-glm::vec2 texCoords[NumVertices];  // texture mappingÀ» À§ÇÑ º¤ÅÍ
-// texture ÀÌ¹ÌÁö°¡ 2D ÀÌ¹ÌÁö¶ó 2Â÷¿øº¤ÅÍ
-glm::vec4 normals[NumVertices];  // lightingÀ» À§ÇÑ º¤ÅÍ
-// °¢ vertex¸¶´Ù »öÀ» ÀÔÈ÷±â À§ÇÔ.
+glm::vec2 texCoords[NumVertices];  // texture mappingì„ ìœ„í•œ ë²¡í„°
+// texture ì´ë¯¸ì§€ê°€ 2D ì´ë¯¸ì§€ë¼ 2ì°¨ì›ë²¡í„°
+glm::vec4 normals[NumVertices];  // lightingì„ ìœ„í•œ ë²¡í„°
+// ê° vertexë§ˆë‹¤ ìƒ‰ì„ ì…íˆê¸° ìœ„í•¨.
 
 
 point4 points[NumVertices];
@@ -80,9 +93,9 @@ int Index = 0;
 void
 quad(int a, int b, int c, int d)
 {
-    // normal vector °è»ê.
+    // normal vector ê³„ì‚°.
     glm::vec4 normal = glm::vec4(glm::cross(glm::vec3(vertices[b] - vertices[a]), glm::vec3(vertices[d] - vertices[a])), 0);
-    // °¢ vertex¸¶´Ù ¾÷µ¥ÀÌÆ®.
+    // ê° vertexë§ˆë‹¤ ì—…ë°ì´íŠ¸.
     colors[Index] = vertex_colors[a]; points[Index] = vertices[a];  normals[Index] = normal;  texCoords[Index] = glm::vec2(0, 0); Index++;
     colors[Index] = vertex_colors[b]; points[Index] = vertices[b];  normals[Index] = normal;  texCoords[Index] = glm::vec2(1, 0); Index++;
     colors[Index] = vertex_colors[c]; points[Index] = vertices[c];  normals[Index] = normal;  texCoords[Index] = glm::vec2(1, 1); Index++;
@@ -113,18 +126,18 @@ init()
 {
     colorcube();
 
-    GLuint shadeModeID;               // ¼ÎÀÌµù ¸ğµåÀÇ ¼ÎÀÌ´õ À§Ä¡ ID
-    GLuint textureModeID;             // ÅØ½ºÃ³ ¸ğµåÀÇ ¼ÎÀÌ´õ À§Ä¡ ID
+    GLuint shadeModeID;               // ì…°ì´ë”© ëª¨ë“œì˜ ì…°ì´ë” ìœ„ì¹˜ ID
+    GLuint textureModeID;             // í…ìŠ¤ì²˜ ëª¨ë“œì˜ ì…°ì´ë” ìœ„ì¹˜ ID
 
     // Create a vertex array object
-    // VAO »ı¼º
-    GLuint vao;
+    // VAO ìƒì„±
+   
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
     // Create and initialize a buffer object
-    // vertex buffer object¸¦ ¸¸µé¾î GPU·Î Àü¼Û
-    // VPO ¸¸µé¾î gpu·Î Àü¼Û
+    // vertex buffer objectë¥¼ ë§Œë“¤ì–´ GPUë¡œ ì „ì†¡
+    // VPO ë§Œë“¤ì–´ gpuë¡œ ì „ì†¡
     GLuint buffer;
     glGenBuffers(1, &buffer);
     glBindBuffer(GL_ARRAY_BUFFER, buffer);
@@ -132,17 +145,17 @@ init()
     //glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(points), points);
     //glBufferSubData(GL_ARRAY_BUFFER, sizeof(points), sizeof(colors), colors);
 
-    // glBufferSubData ÇÔ¼ö´Â glBufferData·Î ÇÒ´çµÈ ¹öÆÛ¿¡ µ¥ÀÌÅÍ¸¦ ¾÷·Îµå
-    // 0 À§Ä¡¿¡ sphere.verts ¹è¿­ µ¥ÀÌÅÍ¸¦ ¾÷·Îµå
+    // glBufferSubData í•¨ìˆ˜ëŠ” glBufferDataë¡œ í• ë‹¹ëœ ë²„í¼ì— ë°ì´í„°ë¥¼ ì—…ë¡œë“œ
+    // 0 ìœ„ì¹˜ì— sphere.verts ë°°ì—´ ë°ì´í„°ë¥¼ ì—…ë¡œë“œ
     glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(points), points);
-    // Á¤Á¡ ¹è¿­ µÚÂÊ vertSize À§Ä¡¿¡ sphere.normals ¹è¿­ µ¥ÀÌÅÍ¸¦ ¾÷·Îµå
+    // ì •ì  ë°°ì—´ ë’¤ìª½ vertSize ìœ„ì¹˜ì— sphere.normals ë°°ì—´ ë°ì´í„°ë¥¼ ì—…ë¡œë“œ
     glBufferSubData(GL_ARRAY_BUFFER, sizeof(points), sizeof(normals), normals);
-    // ¹ı¼± º¤ÅÍ ¹è¿­ µÚÂÊ vertSize + normalSize À§Ä¡¿¡ sphere.texCoords ¹è¿­ µ¥ÀÌÅÍ¸¦ ¾÷·Îµå
+    // ë²•ì„  ë²¡í„° ë°°ì—´ ë’¤ìª½ vertSize + normalSize ìœ„ì¹˜ì— sphere.texCoords ë°°ì—´ ë°ì´í„°ë¥¼ ì—…ë¡œë“œ
     glBufferSubData(GL_ARRAY_BUFFER, sizeof(points) + sizeof(normals), sizeof(texCoords), texCoords);
 
 
     // Load shaders and use the resulting shader program
-    // shader¸¦ ·ÎµåÇØ¼­ program ID·Î ¿¬°áÇØÁÜ.
+    // shaderë¥¼ ë¡œë“œí•´ì„œ program IDë¡œ ì—°ê²°í•´ì¤Œ.
     GLuint program = InitShader("src/vshader.glsl", "src/fshader.glsl");
     glUseProgram(program);
 
@@ -163,63 +176,92 @@ init()
     glEnableVertexAttribArray(vTexCoord);
     glVertexAttribPointer(vTexCoord, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points) + sizeof(normals)));
 
-    // Åõ¿µ Çà·ÄÀ» ¼³Á¤ÇÏ¿© ¼ÎÀÌ´õ¿¡ Àü´Ş
-    //projectMatrixID = glGetUniformLocation(program, "mProject");
-    //projectMat = glm::perspective(glm::radians(65.0f), 1.0f, 0.1f, 100.0f);
-    //glUniformMatrix4fv(projectMatrixID, 1, GL_FALSE, &projectMat[0][0]);
-
-    // ºä Çà·Ä ¼³Á¤ ¹× ¼ÎÀÌ´õ¿¡ Àü´Ş
-    //viewMatrixID = glGetUniformLocation(program, "mView");
-    //viewMat = glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-    //glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMat[0][0]);
-
-    //GLuint vModel = glGetAttribLocation(program, "vModel");  // vertex model
-    //glEnableVertexAttribArray(vModel);
-    //glVertexAttribPointer(vModel, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
-
-    // Uniform matrices
-    //projectMatrixID = glGetUniformLocation(program, "mProject");
-    //glUniformMatrix4fv(projectMatrixID, 1, GL_FALSE, &projectMat[0][0]);
-
-    //viewMatrixID = glGetUniformLocation(program, "mView");
-    //glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMat[0][0]);
-
-    //modelMatrixID = glGetUniformLocation(program, "mModel");
-    //glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMat[0][0]);
-
-    // Åõ¿µ Çà·ÄÀ» ¼³Á¤ÇÏ¿© ¼ÎÀÌ´õ¿¡ Àü´Ş
+    // íˆ¬ì˜ í–‰ë ¬ì„ ì„¤ì •í•˜ì—¬ ì…°ì´ë”ì— ì „ë‹¬
     projectMatrixID = glGetUniformLocation(program, "mProject");
     projectMat = glm::perspective(glm::radians(65.0f), 1.0f, 0.1f, 100.0f);
     glUniformMatrix4fv(projectMatrixID, 1, GL_FALSE, &projectMat[0][0]);
 
-    // ºä Çà·Ä ¼³Á¤ ¹× ¼ÎÀÌ´õ¿¡ Àü´Ş
+    // ë·° í–‰ë ¬ ì„¤ì • ë° ì…°ì´ë”ì— ì „ë‹¬
     viewMatrixID = glGetUniformLocation(program, "mView");
     viewMat = glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
     glUniformMatrix4fv(viewMatrixID, 1, GL_FALSE, &viewMat[0][0]);
 
-    // ¸ğµ¨ Çà·Ä ¼³Á¤ ¹× ¼ÎÀÌ´õ¿¡ Àü´Ş
+    // ëª¨ë¸ í–‰ë ¬ ì„¤ì • ë° ì…°ì´ë”ì— ì „ë‹¬
     modelMatrixID = glGetUniformLocation(program, "mModel");
     modelMat = glm::mat4(1.0f);
     glUniformMatrix4fv(modelMatrixID, 1, GL_FALSE, &modelMat[0][0]);
 
-    pvmMatrixID = glGetUniformLocation(program, "mPVM"); // ÇÏ³ªÀÇ ¿ÀºêÁ§Æ®¿¡ ´ëÇØ µ¿ÀÏÇÑ transformation Àû¿ë
+    pvmMatrixID = glGetUniformLocation(program, "mPVM"); // í•˜ë‚˜ì˜ ì˜¤ë¸Œì íŠ¸ì— ëŒ€í•´ ë™ì¼í•œ transformation ì ìš©
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &(projectMat * viewMat * modelMat)[0][0]);
 
-    // ÅØ½ºÃ³ ·Îµå ¹× Àû¿ë
+    // í…ìŠ¤ì²˜ ë¡œë“œ ë° ì ìš©
     GLuint Texture = loadBMP_custom("stone_surface_texture.bmp");
     GLuint TextureID = glGetUniformLocation(program, "sphereTexture");
 
-    // ÅØ½ºÃ³¸¦ ÅØ½ºÃ³ À¯´Ö 0¿¡ ¹ÙÀÎµùÇÏ°í ¼ÎÀÌ´õ¿¡ Àü´Ş
+    // í…ìŠ¤ì²˜ë¥¼ í…ìŠ¤ì²˜ ìœ ë‹› 0ì— ë°”ì¸ë”©í•˜ê³  ì…°ì´ë”ì— ì „ë‹¬
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, Texture);
     glUniform1i(TextureID, 0);
 
 
-    // projection matrix¿Í view matirx
-    projectMat = glm::perspective(glm::radians(65.0f), 1.0f, 0.1f, 100.0f);  // ¶óµğ¾È ÀÌ¿ë.
-    // ZÃàÀ» À­¹æÇâÀÌ¶ó ¼³Á¤ ÇßÀ» ¶§, Y¸¦ Áõ°¡½ÃÅ°¸é ¿ŞÂÊÀ¸·Î È¸Àü. X¸¦ Áõ°¡½ÃÅ°¸é ¸Ö¾îº¸ÀÓ.
+    // projection matrixì™€ view matirx
+    projectMat = glm::perspective(glm::radians(65.0f), 1.0f, 0.1f, 100.0f);  // ë¼ë””ì•ˆ ì´ìš©.
+    // Zì¶•ì„ ìœ—ë°©í–¥ì´ë¼ ì„¤ì • í–ˆì„ ë•Œ, Yë¥¼ ì¦ê°€ì‹œí‚¤ë©´ ì™¼ìª½ìœ¼ë¡œ íšŒì „. Xë¥¼ ì¦ê°€ì‹œí‚¤ë©´ ë©€ì–´ë³´ì„.
     viewMat = glm::lookAt(glm::vec3(3, 1, 0), glm::vec3(0, 0, 0), glm::vec3(0, 0, 1));
-    // Ã³À½ ÄÚµå:(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0) : 0, 0, 2¿¡¼­ ¿øÁ¡À» ¹Ù¶óº½. yÃàÀÌ À­¹æÇâ
+    // ì²˜ìŒ ì½”ë“œ:(glm::vec3(0, 0, 2), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0) : 0, 0, 2ì—ì„œ ì›ì ì„ ë°”ë¼ë´„. yì¶•ì´ ìœ—ë°©í–¥
+
+    glEnable(GL_DEPTH_TEST);
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+
+    // sphere
+    
+    glGenVertexArrays(1, SPHvao);
+    glBindVertexArray(SPHvao[0]);
+
+    GLuint SPHbuffer[1];
+    glGenBuffers(1, SPHbuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, SPHbuffer[0]);
+
+    int SPHvertSize = sizeof(SPHsphere.verts[0]) * SPHsphere.verts.size();
+    int SPHnormalSize = sizeof(SPHsphere.normals[0]) * SPHsphere.normals.size();
+    int SPHtexSize = sizeof(SPHsphere.texCoords[0]) * SPHsphere.texCoords.size();
+    glBufferData(GL_ARRAY_BUFFER, SPHvertSize + SPHnormalSize + SPHtexSize, NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, SPHvertSize, SPHsphere.verts.data());
+    glBufferSubData(GL_ARRAY_BUFFER, SPHvertSize, SPHnormalSize, SPHsphere.normals.data());
+    glBufferSubData(GL_ARRAY_BUFFER, SPHvertSize + SPHnormalSize, SPHtexSize, SPHsphere.texCoords.data());
+
+    GLuint SPHprogram = InitShader("src/vshader.glsl", "src/fshader.glsl");
+    glUseProgram(SPHprogram);
+    GLuint SPHvPosition = glGetAttribLocation(SPHprogram, "vPosition");
+    glEnableVertexAttribArray(SPHvPosition);
+    glVertexAttribPointer(SPHvPosition, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+    GLuint SPHvNormal = glGetAttribLocation(SPHprogram, "vNormal");
+    glEnableVertexAttribArray(SPHvNormal);
+    glVertexAttribPointer(SPHvNormal, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(SPHvertSize));
+
+    GLuint SPHvTexCoord = glGetAttribLocation(SPHprogram, "vTexCoord");
+    glEnableVertexAttribArray(SPHvTexCoord);
+    glVertexAttribPointer(SPHvTexCoord, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(SPHvertSize + SPHnormalSize));
+
+    SPHprojectMatrixID = glGetUniformLocation(SPHprogram, "mProject");
+    SPHprojectMat = glm::perspective(glm::radians(65.0f), 1.0f, 0.1f, 100.0f);
+    glUniformMatrix4fv(SPHprojectMatrixID, 1, GL_FALSE, &SPHprojectMat[0][0]);
+
+    SPHviewMatrixID = glGetUniformLocation(SPHprogram, "mView");
+    SPHviewMat = glm::lookAt(glm::vec3(0, 0, 3), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
+    glUniformMatrix4fv(SPHviewMatrixID, 1, GL_FALSE, &SPHviewMat[0][0]);
+
+    SPHmodelMatrixID = glGetUniformLocation(SPHprogram, "mModel");
+    SPHmodelMat = glm::mat4(1.0f);
+    glUniformMatrix4fv(SPHmodelMatrixID, 1, GL_FALSE, &SPHmodelMat[0][0]);
+
+    GLuint SPHTexture = loadBMP_custom("stone_surface_texture.bmp");
+    GLuint SPHTextureID = glGetUniformLocation(SPHprogram, "sphereTexture");
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, SPHTexture);
+    glUniform1i(SPHTextureID, 0);
 
     glEnable(GL_DEPTH_TEST);
     glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -233,139 +275,139 @@ void drawCar(glm::mat4 carMat)
     glm::vec3 uppperLegPos[2];
     glm::vec3 ArmPos[2];
 
-    float legZOffset = -0.5f; // Èü Á¶ÀÎÆ®ÀÇ z ÁÂÇ¥
-    float upperLegLength = 0.6f; // »óºÎ ´Ù¸®ÀÇ ±æÀÌ
-    float lowerLegLength = 0.4f; // ÇÏºÎ ´Ù¸®ÀÇ ±æÀÌ
+    float legZOffset = -0.5f; // í™ ì¡°ì¸íŠ¸ì˜ z ì¢Œí‘œ
+    float upperLegLength = 0.6f; // ìƒë¶€ ë‹¤ë¦¬ì˜ ê¸¸ì´
+    float lowerLegLength = 0.4f; // í•˜ë¶€ ë‹¤ë¦¬ì˜ ê¸¸ì´
 
-    // À§ÂÊ y, ¿À¸¥ÂÊ x, viewÂÊÀº z
-    // µÚ·Î º¸³»·Á¸é x¸¦ Áõ°¡½ÃÅ°¸é µÊ. ¿À¸¥ÂÊÀ¸·Î °¡·Á¸é y¸¦ Áõ°¡½ÃÅ°°í, ¾Æ·¡ÂÊÀ¸·Î °¡·Á¸é z¸¦ negative
+    // ìœ„ìª½ y, ì˜¤ë¥¸ìª½ x, viewìª½ì€ z
+    // ë’¤ë¡œ ë³´ë‚´ë ¤ë©´ xë¥¼ ì¦ê°€ì‹œí‚¤ë©´ ë¨. ì˜¤ë¥¸ìª½ìœ¼ë¡œ ê°€ë ¤ë©´ yë¥¼ ì¦ê°€ì‹œí‚¤ê³ , ì•„ë˜ìª½ìœ¼ë¡œ ê°€ë ¤ë©´ zë¥¼ negative
     // Leg position
     uppperLegPos[0] = glm::vec3(0, 0.15, -0.7); // left upper leg 
     uppperLegPos[1] = glm::vec3(0, -0.15, -0.7); // right upper leg
     // Arm position
-    ArmPos[0] = glm::vec3(0, 0.5, 0.1); // left upper arm (·Îº¿ ±âÁØ)
+    ArmPos[0] = glm::vec3(0, 0.5, 0.1); // left upper arm (ë¡œë´‡ ê¸°ì¤€)
     ArmPos[1] = glm::vec3(0, -0.5, 0.1); // right upper arm
 
-    // forearmÀÇ È¸Àü °¢µµ
-    float forearmAngle = glm::radians(-45.0f); // -45µµ¸¦ ¶óµğ¾ÈÀ¸·Î º¯È¯
+    // forearmì˜ íšŒì „ ê°ë„
+    float forearmAngle = glm::radians(-45.0f); // -45ë„ë¥¼ ë¼ë””ì•ˆìœ¼ë¡œ ë³€í™˜
 
     // body
-    modelMat = glm::translate(carMat, glm::vec3(0, 0, 0 + updown * 0.5)); // À§¾Æ·¡ ÀÌµ¿ Ãß°¡
-    modelMat = glm::scale(modelMat, glm::vec3(0.7, 0.8, 0.9)); // ÃÊ±â ÄÚµå (1, 0.6, 1.2), scailing, y°¡ ¸öÅë °¡·ÎÆø
+    modelMat = glm::translate(carMat, glm::vec3(0, 0, 0 + updown * 0.5)); // ìœ„ì•„ë˜ ì´ë™ ì¶”ê°€
+    modelMat = glm::scale(modelMat, glm::vec3(0.7, 0.8, 0.9)); // ì´ˆê¸° ì½”ë“œ (1, 0.6, 1.2), scailing, yê°€ ëª¸í†µ ê°€ë¡œí­
     pvmMat = projectMat * viewMat * modelMat;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
     // head
-    modelMat = glm::translate(carMat, glm::vec3(0, 0, 0.7 + updown * 0.5));  // ÃÊ±â ÄÚµå (0, 0, 0.2), tranlation, ¼ø¼­ : Projection * View * CarMat * Translation * Scailing * vertex
+    modelMat = glm::translate(carMat, glm::vec3(0, 0, 0.7 + updown * 0.5));  // ì´ˆê¸° ì½”ë“œ (0, 0, 0.2), tranlation, ìˆœì„œ : Projection * View * CarMat * Translation * Scailing * vertex
     modelMat = glm::scale(modelMat, glm::vec3(0.5, 0.5, 0.4));  // 
     pvmMat = projectMat * viewMat * modelMat;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
-    // »óºÎ ´Ù¸®
+    // ìƒë¶€ ë‹¤ë¦¬
     for (int i = 0; i < 2; i++)
     {
-        // »óºÎ ´Ù¸® º¯È¯ Çà·Ä
+        // ìƒë¶€ ë‹¤ë¦¬ ë³€í™˜ í–‰ë ¬
         glm::mat4 modelMat_upperLeg = carMat;
-        // ´Ù¸® À§Ä¡·Î ÀÌµ¿
+        // ë‹¤ë¦¬ ìœ„ì¹˜ë¡œ ì´ë™
         modelMat_upperLeg = glm::translate(modelMat_upperLeg, uppperLegPos[i]);
-        // »óºÎ ´Ù¸® È¸Àü Áß½ÉÀ» Èü ÂÊÀ¸·Î ÀÌµ¿ (z ¹æÇâÀ¸·Î »óºÎ ´Ù¸®ÀÇ Àı¹İ ±æÀÌ¸¸Å­)
+        // ìƒë¶€ ë‹¤ë¦¬ íšŒì „ ì¤‘ì‹¬ì„ í™ ìª½ìœ¼ë¡œ ì´ë™ (z ë°©í–¥ìœ¼ë¡œ ìƒë¶€ ë‹¤ë¦¬ì˜ ì ˆë°˜ ê¸¸ì´ë§Œí¼)
         float upperLegOffset = 0.5f * upperLegLength;
         modelMat_upperLeg = glm::translate(modelMat_upperLeg, glm::vec3(0, 0, upperLegOffset));
-        // »óºÎ ´Ù¸® È¸Àü Àû¿ë
+        // ìƒë¶€ ë‹¤ë¦¬ íšŒì „ ì ìš©
         modelMat_upperLeg = glm::rotate(modelMat_upperLeg, legAngle[i], glm::vec3(0, 1, 0));
-        // È¸Àü Áß½É À§Ä¡ º¹±Í
+        // íšŒì „ ì¤‘ì‹¬ ìœ„ì¹˜ ë³µê·€
         modelMat_upperLeg = glm::translate(modelMat_upperLeg, glm::vec3(0, 0, -upperLegOffset));
-        // ½ºÄÉÀÏ Àû¿ë Àü Çà·Ä ÀúÀå
+        // ìŠ¤ì¼€ì¼ ì ìš© ì „ í–‰ë ¬ ì €ì¥
         glm::mat4 modelMat_upperLegNoScale = modelMat_upperLeg;
-        // »óºÎ ´Ù¸® ½ºÄÉÀÏ Á¶Àı
+        // ìƒë¶€ ë‹¤ë¦¬ ìŠ¤ì¼€ì¼ ì¡°ì ˆ
         modelMat_upperLeg = glm::scale(modelMat_upperLeg, glm::vec3(0.25, 0.25, upperLegLength));
-        // »óºÎ ´Ù¸® ±×¸®±â
+        // ìƒë¶€ ë‹¤ë¦¬ ê·¸ë¦¬ê¸°
         pvmMat = projectMat * viewMat * modelMat_upperLeg;
         glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
         glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
-        // ÇÏºÎ ´Ù¸® º¯È¯ Çà·Ä
+        // í•˜ë¶€ ë‹¤ë¦¬ ë³€í™˜ í–‰ë ¬
         glm::mat4 modelMat_lowerLeg = modelMat_upperLegNoScale;
-        // »óºÎ ´Ù¸®ÀÇ ³¡(¹«¸­ À§Ä¡)À¸·Î ÀÌµ¿
+        // ìƒë¶€ ë‹¤ë¦¬ì˜ ë(ë¬´ë¦ ìœ„ì¹˜)ìœ¼ë¡œ ì´ë™
         modelMat_lowerLeg = glm::translate(modelMat_lowerLeg, glm::vec3(0, 0, -upperLegLength));
-        // ÇÏºÎ ´Ù¸® È¸Àü Áß½ÉÀ» ¹«¸­ ÂÊÀ¸·Î ÀÌµ¿ (z ¹æÇâÀ¸·Î ÇÏºÎ ´Ù¸®ÀÇ Àı¹İ ±æÀÌ¸¸Å­)
+        // í•˜ë¶€ ë‹¤ë¦¬ íšŒì „ ì¤‘ì‹¬ì„ ë¬´ë¦ ìª½ìœ¼ë¡œ ì´ë™ (z ë°©í–¥ìœ¼ë¡œ í•˜ë¶€ ë‹¤ë¦¬ì˜ ì ˆë°˜ ê¸¸ì´ë§Œí¼)
         float lowerLegOffset = 0.5f * lowerLegLength;
         modelMat_lowerLeg = glm::translate(modelMat_lowerLeg, glm::vec3(0, 0, lowerLegOffset));
-        // ÇÏºÎ ´Ù¸® È¸Àü Àû¿ë
+        // í•˜ë¶€ ë‹¤ë¦¬ íšŒì „ ì ìš©
         modelMat_lowerLeg = glm::rotate(modelMat_lowerLeg, kneeAngle[i], glm::vec3(0, 1, 0));
-        // È¸Àü Áß½É À§Ä¡ º¹±Í
+        // íšŒì „ ì¤‘ì‹¬ ìœ„ì¹˜ ë³µê·€
         modelMat_lowerLeg = glm::translate(modelMat_lowerLeg, glm::vec3(0, 0, -lowerLegOffset));
-        // ÇÏºÎ ´Ù¸® ½ºÄÉÀÏ Á¶Àı
+        // í•˜ë¶€ ë‹¤ë¦¬ ìŠ¤ì¼€ì¼ ì¡°ì ˆ
         modelMat_lowerLeg = glm::scale(modelMat_lowerLeg, glm::vec3(0.25, 0.25, lowerLegLength));
-        // ÇÏºÎ ´Ù¸® ±×¸®±â
+        // í•˜ë¶€ ë‹¤ë¦¬ ê·¸ë¦¬ê¸°
         pvmMat = projectMat * viewMat * modelMat_lowerLeg;
         glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
         glDrawArrays(GL_TRIANGLES, 0, NumVertices);
     }
 
 
-    float zOffset = 0.2f; // È¸Àü Áß½ÉÀ» ¾ó¸¶³ª À§·Î ¿Ã¸±Áö °áÁ¤
+    float zOffset = 0.2f; // íšŒì „ ì¤‘ì‹¬ì„ ì–¼ë§ˆë‚˜ ìœ„ë¡œ ì˜¬ë¦´ì§€ ê²°ì •
 
     // === Left Upper Arm ===
     glm::mat4 modelMat_upperArm_Left = carMat;
-    // Upper Arm À§Ä¡ ÀÌµ¿
+    // Upper Arm ìœ„ì¹˜ ì´ë™
     modelMat_upperArm_Left = glm::translate(modelMat_upperArm_Left, ArmPos[0]);
-    // È¸Àü Áß½ÉÀ» zÃà ¹æÇâÀ¸·Î À§·Î ÀÌµ¿
+    // íšŒì „ ì¤‘ì‹¬ì„ zì¶• ë°©í–¥ìœ¼ë¡œ ìœ„ë¡œ ì´ë™
     modelMat_upperArm_Left = glm::translate(modelMat_upperArm_Left, glm::vec3(0, 0, zOffset));
-    // Upper Arm È¸Àü Àû¿ë
+    // Upper Arm íšŒì „ ì ìš©
     modelMat_upperArm_Left = glm::rotate(modelMat_upperArm_Left, armAngle, glm::vec3(0, 1, 0));
-    // È¸Àü Áß½É º¹±Í
+    // íšŒì „ ì¤‘ì‹¬ ë³µê·€
     modelMat_upperArm_Left = glm::translate(modelMat_upperArm_Left, glm::vec3(0, 0, -zOffset));
-    // Upper Arm ½ºÄÉÀÏ Á¶Àı
+    // Upper Arm ìŠ¤ì¼€ì¼ ì¡°ì ˆ
     glm::mat4 modelMat_upperArm_Left_Scaled = glm::scale(modelMat_upperArm_Left, glm::vec3(0.2, 0.2, 0.5));
-    // Upper Arm ±×¸®±â
+    // Upper Arm ê·¸ë¦¬ê¸°
     pvmMat = projectMat * viewMat * modelMat_upperArm_Left_Scaled;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
     // === Left Lower Arm ===
     glm::mat4 modelMat_lowerArm_Left = modelMat_upperArm_Left;
-    // Upper ArmÀÇ ³¡À¸·Î ÀÌµ¿ (Upper ArmÀÇ ±æÀÌ´Â ½ºÄÉÀÏ¸µ µÈ °ª »ç¿ë)
-    float upperArmLength = 0.5f; // Upper ArmÀÇ zÃà ½ºÄÉÀÏ °ª
-    // Upper ArmÀÇ ³¡À¸·Î ÀÌµ¿
+    // Upper Armì˜ ëìœ¼ë¡œ ì´ë™ (Upper Armì˜ ê¸¸ì´ëŠ” ìŠ¤ì¼€ì¼ë§ ëœ ê°’ ì‚¬ìš©)
+    float upperArmLength = 0.5f; // Upper Armì˜ zì¶• ìŠ¤ì¼€ì¼ ê°’
+    // Upper Armì˜ ëìœ¼ë¡œ ì´ë™
     modelMat_lowerArm_Left = glm::translate(modelMat_lowerArm_Left, glm::vec3(0.2, 0, -upperArmLength));
-    // Lower Arm È¸Àü Àû¿ë (ÇÊ¿äÇÑ °æ¿ì)
+    // Lower Arm íšŒì „ ì ìš© (í•„ìš”í•œ ê²½ìš°)
     modelMat_lowerArm_Left = glm::rotate(modelMat_lowerArm_Left, forearmAngle, glm::vec3(0, 1, 0));
-    // Lower Arm ½ºÄÉÀÏ Á¶Àı
+    // Lower Arm ìŠ¤ì¼€ì¼ ì¡°ì ˆ
     modelMat_lowerArm_Left = glm::scale(modelMat_lowerArm_Left, glm::vec3(0.2, 0.2, 0.5));
-    // Lower Arm ±×¸®±â
+    // Lower Arm ê·¸ë¦¬ê¸°
     pvmMat = projectMat * viewMat * modelMat_lowerArm_Left;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
     // === Right Upper Arm ===
     glm::mat4 modelMat_upperArm_Right = carMat;
-    // Upper Arm À§Ä¡ ÀÌµ¿
+    // Upper Arm ìœ„ì¹˜ ì´ë™
     modelMat_upperArm_Right = glm::translate(modelMat_upperArm_Right, ArmPos[1]);
-    // È¸Àü Áß½ÉÀ» zÃà ¹æÇâÀ¸·Î À§·Î ÀÌµ¿
+    // íšŒì „ ì¤‘ì‹¬ì„ zì¶• ë°©í–¥ìœ¼ë¡œ ìœ„ë¡œ ì´ë™
     modelMat_upperArm_Right = glm::translate(modelMat_upperArm_Right, glm::vec3(0, 0, zOffset));
-    // Upper Arm È¸Àü Àû¿ë (¹İ´ë ¹æÇâ)
+    // Upper Arm íšŒì „ ì ìš© (ë°˜ëŒ€ ë°©í–¥)
     modelMat_upperArm_Right = glm::rotate(modelMat_upperArm_Right, armAngle, glm::vec3(0, -1, 0));
-    // È¸Àü Áß½É º¹±Í
+    // íšŒì „ ì¤‘ì‹¬ ë³µê·€
     modelMat_upperArm_Right = glm::translate(modelMat_upperArm_Right, glm::vec3(0, 0, -zOffset));
-    // Upper Arm ½ºÄÉÀÏ Á¶Àı
+    // Upper Arm ìŠ¤ì¼€ì¼ ì¡°ì ˆ
     glm::mat4 modelMat_upperArm_Right_Scaled = glm::scale(modelMat_upperArm_Right, glm::vec3(0.2, 0.2, 0.5));
-    // Upper Arm ±×¸®±â
+    // Upper Arm ê·¸ë¦¬ê¸°
     pvmMat = projectMat * viewMat * modelMat_upperArm_Right_Scaled;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
     // === Right Lower Arm ===
     glm::mat4 modelMat_lowerArm_Right = modelMat_upperArm_Right;
-    // Upper ArmÀÇ ³¡À¸·Î ÀÌµ¿
+    // Upper Armì˜ ëìœ¼ë¡œ ì´ë™
     modelMat_lowerArm_Right = glm::translate(modelMat_lowerArm_Right, glm::vec3(0.2, 0, -upperArmLength));
-    // Lower Arm È¸Àü Àû¿ë (ÇÊ¿äÇÑ °æ¿ì)
+    // Lower Arm íšŒì „ ì ìš© (í•„ìš”í•œ ê²½ìš°)
     modelMat_lowerArm_Right = glm::rotate(modelMat_lowerArm_Right, forearmAngle, glm::vec3(0, 1, 0));
-    // Lower Arm ½ºÄÉÀÏ Á¶Àı
+    // Lower Arm ìŠ¤ì¼€ì¼ ì¡°ì ˆ
     modelMat_lowerArm_Right = glm::scale(modelMat_lowerArm_Right, glm::vec3(0.2, 0.2, 0.5));
-    // Lower Arm ±×¸®±â
+    // Lower Arm ê·¸ë¦¬ê¸°
     pvmMat = projectMat * viewMat * modelMat_lowerArm_Right;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
@@ -378,15 +420,30 @@ void display(void)
     glm::mat4 worldMat, pvmMat;
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // È¸ÀüÀ» ÇÏ´Â matrix. ±âÁ¸ matrix¸¦ ³Ñ±è.
-    // worldMat = glm::rotate(glm::mat4(1.0f), rotAngle, glm::vec3(1.0f, 1.0f, 0.0f)); // ÀÌÀü matrix : glm::mat4(1.0f), È¸ÀüÃà : glm::vec3(1.0f, 1.0f, 0.0f)
-
-    // È¸Àü º¯È¯À» Á¦°ÅÇÏ¿© worldMatÀ» ´ÜÀ§ Çà·Ä·Î ¼³Á¤.
-    worldMat = glm::mat4(1.0f); // ´ÜÀ§ Çà·Ä
+    // ìë™ì°¨ ë Œë”ë§
+    worldMat = glm::mat4(1.0f);
     drawCar(worldMat);
 
+    // êµ¬ì²´ ë Œë”ë§
+    glBindVertexArray(SPHvao[0]); // êµ¬ì²´ì˜ VAOë¥¼ ë°”ì¸ë”©
+    glUniformMatrix4fv(SPHmodelMatrixID, 1, GL_FALSE, &SPHmodelMat[0][0]);
+    glDrawArrays(GL_TRIANGLES, 0, SPHsphere.verts.size());
+
+    // VAOë¥¼ ìë™ì°¨ë¡œ ë‹¤ì‹œ ì„¤ì •
+    glBindVertexArray(vao); // ìë™ì°¨ì˜ VAOë¥¼ ë‹¤ì‹œ ë°”ì¸ë”©
     glutSwapBuffers();
 }
+
+void SPHresize(int w, int h)
+{
+    float SPHratio = (float)w / (float)h;
+    glViewport(0, 0, w, h);
+
+    SPHprojectMat = glm::perspective(glm::radians(65.0f), SPHratio, 0.1f, 100.0f);
+    glUniformMatrix4fv(SPHprojectMatrixID, 1, GL_FALSE, &SPHprojectMat[0][0]);
+    glutPostRedisplay();
+}
+
 
 //----------------------------------------------------------------------------
 
@@ -401,26 +458,26 @@ void idle()
         rotAngle += glm::radians(t * 360.0f / 10000.0f);
 
         float timeInSeconds = currTime / 1000.0f;
-        float maxAngleDegrees = 60.0f;  // ÆÈ ÃÖ´ë °¢µµ
-        float frequency = 10.0f;  // ¼Óµµ Á¶Àı
+        float maxAngleDegrees = 60.0f;  // íŒ” ìµœëŒ€ ê°ë„
+        float frequency = 10.0f;  // ì†ë„ ì¡°ì ˆ
 
-        // ÆÈ °¢µµ °è»ê
+        // íŒ” ê°ë„ ê³„ì‚°
         armAngle = glm::radians(maxAngleDegrees * sin(frequency * timeInSeconds));
 
-        // ´Ù¸® ÃÖ´ë °¢µµ °è»ê
+        // ë‹¤ë¦¬ ìµœëŒ€ ê°ë„ ê³„ì‚°
         float maxLegAngleDegrees = 60.0f;
 
-        // ¿ŞÂÊ°ú ¿À¸¥ÂÊ ´Ù¸®ÀÇ °¢µµ¸¦ ¹İ´ë À§»óÀ¸·Î ¼³Á¤
+        // ì™¼ìª½ê³¼ ì˜¤ë¥¸ìª½ ë‹¤ë¦¬ì˜ ê°ë„ë¥¼ ë°˜ëŒ€ ìœ„ìƒìœ¼ë¡œ ì„¤ì •
         legAngle[0] = glm::radians(maxLegAngleDegrees * sin(frequency * timeInSeconds));
         legAngle[1] = -legAngle[0];
 
-        float maxKneeAngleDegrees = 60.0f; // ÃÖ´ë ¹«¸­ °¢µµ¸¦ 45µµ·Î ¼³Á¤
+        float maxKneeAngleDegrees = 60.0f; // ìµœëŒ€ ë¬´ë¦ ê°ë„ë¥¼ 45ë„ë¡œ ì„¤ì •
 
-        // Àı´ë°ªÀ» »ç¿ëÇÏ¿© ¹«¸­ÀÌ ÇÑ ¹æÇâÀ¸·Î¸¸ È¸ÀüÇÏµµ·Ï ¼³Á¤
+        // ì ˆëŒ€ê°’ì„ ì‚¬ìš©í•˜ì—¬ ë¬´ë¦ì´ í•œ ë°©í–¥ìœ¼ë¡œë§Œ íšŒì „í•˜ë„ë¡ ì„¤ì •
         kneeAngle[0] = glm::radians(maxKneeAngleDegrees * abs(sin(frequency * timeInSeconds)));
         kneeAngle[1] = glm::radians(maxKneeAngleDegrees * abs(sin(frequency * timeInSeconds + glm::pi<float>())));
 
-        // ¸Ó¸® À§ ¾Æ·¡ °è»ê
+        // ë¨¸ë¦¬ ìœ„ ì•„ë˜ ê³„ì‚°
         float headAmplitude = 0.1f; // Maximum displacement
         updown = headAmplitude * sin(frequency * timeInSeconds);
 
@@ -444,24 +501,24 @@ keyboard(unsigned char key, int x, int y)
         // Side view
         viewMat = glm::lookAt(
             glm::vec3(0, -3, 0),   // side view
-            glm::vec3(0, 0, 0),    // ¹Ù¶óº¸´Â ÁöÁ¡
-            glm::vec3(0, 0, 1));   // ¾÷ º¤ÅÍ
+            glm::vec3(0, 0, 0),    // ë°”ë¼ë³´ëŠ” ì§€ì 
+            glm::vec3(0, 0, 1));   // ì—… ë²¡í„°
         glutPostRedisplay();
         break;
     case '2':
         // Over-the-shoulder view
         viewMat = glm::lookAt(
             glm::vec3(-3, 1, 1),   // over the shoulder view
-            glm::vec3(0, 0, 0),    // ¹Ù¶óº¸´Â ÁöÁ¡
-            glm::vec3(0, 0, 1));   // ¾÷ º¤ÅÍ
+            glm::vec3(0, 0, 0),    // ë°”ë¼ë³´ëŠ” ì§€ì 
+            glm::vec3(0, 0, 1));   // ì—… ë²¡í„°
         glutPostRedisplay();
         break;
     case '3':
         // Front view
         viewMat = glm::lookAt(
             glm::vec3(3, 0, 0.5),    // front view
-            glm::vec3(0, 0, 0),    // ¹Ù¶óº¸´Â ÁöÁ¡
-            glm::vec3(0, 0, 1));   // ¾÷ º¤ÅÍ
+            glm::vec3(0, 0, 0),    // ë°”ë¼ë³´ëŠ” ì§€ì 
+            glm::vec3(0, 0, 1));   // ì—… ë²¡í„°
         glutPostRedisplay();
         break;
     }
@@ -474,7 +531,7 @@ void resize(int w, int h)
     float ratio = (float)w / (float)h;
     glViewport(0, 0, w, h);
 
-    projectMat = glm::perspective(glm::radians(65.0f), ratio, 0.1f, 100.0f);  // ÀÌ ÄÚµå°¡ ¾øÀ¸¸é Ã¢ Å©±â¿¡ µû¶ó aspect ratio°¡ ¹Ù²î°Ô µÊ.
+    projectMat = glm::perspective(glm::radians(65.0f), ratio, 0.1f, 100.0f);  // ì´ ì½”ë“œê°€ ì—†ìœ¼ë©´ ì°½ í¬ê¸°ì— ë”°ë¼ aspect ratioê°€ ë°”ë€Œê²Œ ë¨.
 
     glutPostRedisplay();
 }
@@ -498,6 +555,7 @@ main(int argc, char** argv)
     glutDisplayFunc(display);
 
     glutReshapeFunc(resize);
+    glutReshapeFunc(SPHresize);
     glutIdleFunc(idle);
 
     glutMainLoop();

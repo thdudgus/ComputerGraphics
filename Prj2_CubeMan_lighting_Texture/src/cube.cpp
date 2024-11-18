@@ -12,7 +12,7 @@
 #include "texture.hpp"
 #include "sphere.h"
 
-GLuint SPHvao[1];
+GLuint SPHvao;
 GLuint vao;
 
 // glm::mat4가 4*4 행렬을 정의할 수 있게 함.
@@ -28,6 +28,8 @@ GLuint SPHprojectMatrixID;           // 투영 행렬의 셰이더 위치 ID
 GLuint SPHviewMatrixID;              // 뷰 행렬의 셰이더 위치 ID
 GLuint SPHmodelMatrixID;             // 모델 행렬의 셰이더 위치 ID
 Sphere SPHsphere(50, 50);            // 구체 생성, 50x50의 세부 수준으로 초기화
+GLuint SPHTexture;
+GLuint Texture;
 
 // 벡터를 저장할 수 있게 함. 
 glm::vec4 pvMatrixID; // vertex shader에서 mPVM으로 넘겨줄 uniform variable의 ID
@@ -131,7 +133,7 @@ init()
 
     // Create a vertex array object
     // VAO 생성
-   
+
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
 
@@ -168,9 +170,9 @@ init()
     glEnableVertexAttribArray(vNormal);
     glVertexAttribPointer(vNormal, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
 
-    GLuint vColor = glGetAttribLocation(program, "vColor");  // vertex color
-    glEnableVertexAttribArray(vColor);
-    glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
+    //GLuint vColor = glGetAttribLocation(program, "vColor");  // vertex color
+    //glEnableVertexAttribArray(vColor);
+    //glVertexAttribPointer(vColor, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(sizeof(points)));
 
     GLuint vTexCoord = glGetAttribLocation(program, "vTexCoord");
     glEnableVertexAttribArray(vTexCoord);
@@ -195,7 +197,7 @@ init()
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &(projectMat * viewMat * modelMat)[0][0]);
 
     // 텍스처 로드 및 적용
-    GLuint Texture = loadBMP_custom("stone_surface_texture.bmp");
+    Texture = loadBMP_custom("stone_surface_texture.bmp");
     GLuint TextureID = glGetUniformLocation(program, "sphereTexture");
 
     // 텍스처를 텍스처 유닛 0에 바인딩하고 셰이더에 전달
@@ -214,13 +216,13 @@ init()
     glClearColor(0.0, 0.0, 0.0, 1.0);
 
     // sphere
-    
-    glGenVertexArrays(1, SPHvao);
-    glBindVertexArray(SPHvao[0]);
 
-    GLuint SPHbuffer[1];
-    glGenBuffers(1, SPHbuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, SPHbuffer[0]);
+    glGenVertexArrays(1, &SPHvao);
+    glBindVertexArray(SPHvao);
+
+    GLuint SPHbuffer;
+    glGenBuffers(1, &SPHbuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, SPHbuffer);
 
     int SPHvertSize = sizeof(SPHsphere.verts[0]) * SPHsphere.verts.size();
     int SPHnormalSize = sizeof(SPHsphere.normals[0]) * SPHsphere.normals.size();
@@ -256,7 +258,7 @@ init()
     SPHmodelMat = glm::mat4(1.0f);
     glUniformMatrix4fv(SPHmodelMatrixID, 1, GL_FALSE, &SPHmodelMat[0][0]);
 
-    GLuint SPHTexture = loadBMP_custom("stone_surface_texture.bmp");
+    SPHTexture = loadBMP_custom("wood.bmp");
     GLuint SPHTextureID = glGetUniformLocation(SPHprogram, "sphereTexture");
 
     glActiveTexture(GL_TEXTURE0);
@@ -299,11 +301,15 @@ void drawCar(glm::mat4 carMat)
     glDrawArrays(GL_TRIANGLES, 0, NumVertices);
 
     // head
+    glBindTexture(GL_TEXTURE_2D, SPHTexture);  // vao 바인드 적용해서 아래 코드들로 그리고
+    glBindVertexArray(SPHvao);
     modelMat = glm::translate(carMat, glm::vec3(0, 0, 0.7 + updown * 0.5));  // 초기 코드 (0, 0, 0.2), tranlation, 순서 : Projection * View * CarMat * Translation * Scailing * vertex
-    modelMat = glm::scale(modelMat, glm::vec3(0.5, 0.5, 0.4));  // 
+    modelMat = glm::scale(modelMat, glm::vec3(0.4, 0.4, 0.4));  // 
     pvmMat = projectMat * viewMat * modelMat;
     glUniformMatrix4fv(pvmMatrixID, 1, GL_FALSE, &pvmMat[0][0]);
-    glDrawArrays(GL_TRIANGLES, 0, NumVertices);
+    glDrawArrays(GL_TRIANGLES, 0, SPHsphere.verts.size());
+    glBindVertexArray(vao);
+    glBindTexture(GL_TEXTURE_2D, Texture);   // vao 바인드 해제.
 
     // 상부 다리
     for (int i = 0; i < 2; i++)
@@ -425,9 +431,10 @@ void display(void)
     drawCar(worldMat);
 
     // 구체 렌더링
-    glBindVertexArray(SPHvao[0]); // 구체의 VAO를 바인딩
-    glUniformMatrix4fv(SPHmodelMatrixID, 1, GL_FALSE, &SPHmodelMat[0][0]);
-    glDrawArrays(GL_TRIANGLES, 0, SPHsphere.verts.size());
+    //glBindVertexArray(SPHvao); // 구체의 VAO를 바인딩
+    //glUniformMatrix4fv(SPHmodelMatrixID, 1, GL_FALSE, &SPHmodelMat[0][0]);
+    //glDrawArrays(GL_TRIANGLES, 0, SPHsphere.verts.size());
+
 
     // VAO를 자동차로 다시 설정
     glBindVertexArray(vao); // 자동차의 VAO를 다시 바인딩

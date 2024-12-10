@@ -1,6 +1,7 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -25,6 +26,7 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
+unsigned int loadTexture(const char* path);
 void processInput(GLFWwindow *window);
 
 // settings
@@ -42,6 +44,16 @@ ObjectRot objRotate;
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
+
+glm::vec3 lightPositions[] = {
+    glm::vec3(0.0f, 0.0f, 10.0f),
+    glm::vec3(15.0f, 15.0f, 10.0f),
+};
+glm::vec3 lightColors[] = {
+    glm::vec3(150.0f, 150.0f, 150.0f),
+    glm::vec3(100.0f, 100.0f, 100.0f),
+};
+
 int main()
 {
     // glfw: initialize and configure
@@ -49,6 +61,7 @@ int main()
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -58,6 +71,7 @@ int main()
     // glfw window creation
     // --------------------
     GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    glfwMakeContextCurrent(window);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -71,10 +85,15 @@ int main()
     glfwSetScrollCallback(window, scroll_callback);
 
     // tell GLFW to capture our mouse
-    //glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glew: load all OpenGL function pointers
 	glewInit();
+    if (glewInit() != GLEW_OK)
+    {
+        std::cout << "Failed to initialize GLEW" << std::endl;
+        return -1;
+    }
 
 
     // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
@@ -88,10 +107,58 @@ int main()
     // -------------------------
     Shader ourShader("src/1.model_loading.vs", "src/1.model_loading.fs");
 
+    ourShader.use();
+
+    ourShader.setVec3("camPos", camera.Position);
+
+    // lightPositions, lightColors 설정 (반드시 shader 코드와 일치)
+    ourShader.setVec3("lightPositions[0]", lightPositions[0]);
+    ourShader.setVec3("lightPositions[1]", lightPositions[1]);
+    // 만약 나머지 2개 광원을 사용하지 않는다면 쉐이더에서 for문 범위를 2로 줄이거나
+    // 아니면 positions[2], positions[3]에 임의의 값(또는 (0,0,0))을 넣어도 된다.
+
+    ourShader.setVec3("lightColors[0]", lightColors[0]);
+    ourShader.setVec3("lightColors[1]", lightColors[1]);
+    // 마찬가지로 나머지 2개 광원에 대한 부분도 정리.
+
+    ourShader.setInt("albedoMap", 0);
+    ourShader.setInt("normalMap", 1);
+    ourShader.setInt("metallicMap", 2);
+    ourShader.setInt("roughnessMap", 3);
+    ourShader.setInt("aoMap", 4);
+
+    // load PBR material textures
+// --------------------------
+    unsigned int albedo = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_BaseColor.png").c_str());
+    unsigned int normal = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_Normal.png").c_str());
+    unsigned int metallic = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_Metallic.png").c_str());
+    unsigned int roughness = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_Roughness.png").c_str());
+    unsigned int ao = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_Diffuse.png").c_str());
+
+    // lights
+// ------
+    glm::vec3 lightPositions[] = {
+        glm::vec3(0.0f, 0.0f, 10.0f),
+        glm::vec3(15.0f, 15.0f, 10.0f),
+    };
+    glm::vec3 lightColors[] = {
+        glm::vec3(150.0f, 150.0f, 150.0f),
+        glm::vec3(100.0f, 100.0f, 100.0f),
+    };
+    int nrRows = 7;
+    int nrColumns = 7;
+    float spacing = 2.5;
+
+    // initialize static shader uniforms before rendering
+// --------------------------------------------------
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+    ourShader.use();
+    ourShader.setMat4("projection", projection);
+
     // load models
     // -----------
     //Model ourModel(FileSystem::getPath("../resources/backpack/backpack.obj"));
-    Model ourModel(FileSystem::getPath("../resources/desk/PC-desk.obj"));
+    Model ourModel(FileSystem::getPath("../resources/gear/Gear2.obj"));
 
     
     // draw in wireframe
@@ -125,10 +192,21 @@ int main()
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, albedo);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, normal);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, metallic);
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, roughness);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, ao);
+
         // render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));	// it's a bit too big for our scene, so scale it down
+        model = glm::scale(model, glm::vec3(0.1f, 0.1f, 0.1f));	// it's a bit too big for our scene, so scale it down
 		model = glm::rotate(model, objRotate.pitch(), glm::vec3(1.0f, 0.0f, 0.0f)); //pitch
 		model = glm::rotate(model, objRotate.yaw(), glm::vec3(0.0f, 1.0f, 0.0f)); //yaw
         ourShader.setMat4("model", model);
@@ -211,4 +289,41 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     camera.ProcessMouseScroll(yoffset);
+}
+
+unsigned int loadTexture(const char* path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char* data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
 }

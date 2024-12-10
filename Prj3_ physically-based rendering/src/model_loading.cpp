@@ -99,10 +99,6 @@ int main()
         return -1;
     }
 
-
-    // tell stb_image.h to flip loaded texture's on the y-axis (before loading model).
-    stbi_set_flip_vertically_on_load(true);
-
     // configure global opengl state
     // -----------------------------
     glEnable(GL_DEPTH_TEST);
@@ -168,27 +164,6 @@ int main()
     glReadBuffer(GL_NONE);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-    ourShader.use();
-
-    ourShader.setVec3("camPos", camera.Position);
-
-    // lightPositions, lightColors ¼³Á¤ (¹İµå½Ã shader ÄÚµå¿Í ÀÏÄ¡)
-    ourShader.setVec3("lightPositions[0]", lightPositions[0]);
-    ourShader.setVec3("lightPositions[1]", lightPositions[1]);
-    // ¸¸¾à ³ª¸ÓÁö 2°³ ±¤¿øÀ» »ç¿ëÇÏÁö ¾Ê´Â´Ù¸é ½¦ÀÌ´õ¿¡¼­ for¹® ¹üÀ§¸¦ 2·Î ÁÙÀÌ°Å³ª
-    // ¾Æ´Ï¸é positions[2], positions[3]¿¡ ÀÓÀÇÀÇ °ª(¶Ç´Â (0,0,0))À» ³Ö¾îµµ µÈ´Ù.
-
-    ourShader.setVec3("lightColors[0]", lightColors[0]);
-    ourShader.setVec3("lightColors[1]", lightColors[1]);
-    // ¸¶Âù°¡Áö·Î ³ª¸ÓÁö 2°³ ±¤¿ø¿¡ ´ëÇÑ ºÎºĞµµ Á¤¸®.
-
-    ourShader.setInt("albedoMap", 0);
-    ourShader.setInt("normalMap", 1);
-    ourShader.setInt("metallicMap", 2);
-    ourShader.setInt("roughnessMap", 3);
-    ourShader.setInt("aoMap", 4);
-
-
     // shader configuration
 // --------------------
     shader.use();
@@ -198,9 +173,28 @@ int main()
     debugDepthQuad.setInt("depthMap", 0);
 
 
-    // lighting info
-// -------------
-    glm::vec3 lightPos(0.0f, 3.0f, 0.0f);
+    ourShader.use();
+
+    ourShader.setVec3("camPos", camera.Position);
+
+    // lightPositions, lightColors ì„¤ì • (ë°˜ë“œì‹œ shader ì½”ë“œì™€ ì¼ì¹˜)
+    ourShader.setVec3("lightPositions[0]", lightPositions[0]);
+    ourShader.setVec3("lightPositions[1]", lightPositions[1]);
+    // ë§Œì•½ ë‚˜ë¨¸ì§€ 2ê°œ ê´‘ì›ì„ ì‚¬ìš©í•˜ì§€ ì•ŠëŠ”ë‹¤ë©´ ì‰ì´ë”ì—ì„œ forë¬¸ ë²”ìœ„ë¥¼ 2ë¡œ ì¤„ì´ê±°ë‚˜
+    // ì•„ë‹ˆë©´ positions[2], positions[3]ì— ì„ì˜ì˜ ê°’(ë˜ëŠ” (0,0,0))ì„ ë„£ì–´ë„ ëœë‹¤.
+
+    ourShader.setVec3("lightColors[0]", lightColors[0]);
+    ourShader.setVec3("lightColors[1]", lightColors[1]);
+    // ë§ˆì°¬ê°€ì§€ë¡œ ë‚˜ë¨¸ì§€ 2ê°œ ê´‘ì›ì— ëŒ€í•œ ë¶€ë¶„ë„ ì •ë¦¬.
+
+    ourShader.setInt("albedoMap", 0);
+    ourShader.setInt("normalMap", 1);
+    ourShader.setInt("metallicMap", 2);
+    ourShader.setInt("roughnessMap", 3);
+    ourShader.setInt("aoMap", 4);
+
+
+
 
 
     // load PBR material textures
@@ -266,7 +260,7 @@ int main()
         float near_plane = 1.0f, far_plane = 7.5f;
         //lightProjection = glm::perspective(glm::radians(45.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, near_plane, far_plane); // note that if you use a perspective projection matrix you'll have to change the light position as the current light position isn't enough to reflect the whole scene
         lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-        lightView = glm::lookAt(lightPos, glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+        lightView = glm::lookAt(lightPositions[0], glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
         lightSpaceMatrix = lightProjection * lightView;
         // render scene from light's point of view
         simpleDepthShader.use();
@@ -295,7 +289,8 @@ int main()
         shader.setMat4("view", view);
         // set light uniforms
         shader.setVec3("viewPos", camera.Position);
-        shader.setVec3("lightPos", lightPos);
+        shader.setVec3("lightPositions[0]", lightPositions[0]);
+        shader.setVec3("lightPositions[1]", lightPositions[1]);
         shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, woodTexture);
@@ -310,7 +305,7 @@ int main()
         debugDepthQuad.setFloat("far_plane", far_plane);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, depthMap);
-     
+    
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
@@ -346,6 +341,11 @@ int main()
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+
+    // optional: de-allocate all resources once they've outlived their purpose:
+// ------------------------------------------------------------------------
+    glDeleteVertexArrays(1, &planeVAO);
+    glDeleteBuffers(1, &planeVBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -441,8 +441,13 @@ unsigned int loadTexture(const char* path)
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 

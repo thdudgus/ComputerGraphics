@@ -12,8 +12,8 @@ uniform sampler2D roughnessMap;
 uniform sampler2D aoMap;
 
 // lights
-uniform vec3 lightPositions[2];
-uniform vec3 lightColors[2];
+uniform vec3 lightPositions[1];
+uniform vec3 lightColors[1];
 
 uniform vec3 camPos;
 
@@ -97,7 +97,7 @@ void main()
 
     // reflectance equation
     vec3 Lo = vec3(0.0);
-    for(int i = 0; i < 2; ++i) 
+    for(int i = 0; i < 1; ++i) 
     {
         // calculate per-light radiance
         vec3 L = normalize(lightPositions[i] - WorldPos);
@@ -135,7 +135,7 @@ void main()
     
     // ambient lighting (note that the next IBL tutorial will replace 
     // this ambient lighting with environment lighting).
-    vec3 ambient = vec3(0.5) * albedo * ao;
+    vec3 ambient = vec3(1.0) * albedo * ao;
     
     vec3 color = ambient + Lo;
 

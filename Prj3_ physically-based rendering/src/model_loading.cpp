@@ -35,7 +35,8 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.3f, 3.0f));
+//Camera camera(glm::vec3(0.0f, 0.3f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.4f, 3.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool dragMouseLeft = false;
@@ -49,13 +50,13 @@ float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
 
+// lights
+// ------
 glm::vec3 lightPositions[] = {
     glm::vec3(0.0f, 0.0f, 10.0f),
-    glm::vec3(15.0f, 15.0f, 10.0f),
 };
 glm::vec3 lightColors[] = {
     glm::vec3(150.0f, 150.0f, 150.0f),
-    glm::vec3(100.0f, 100.0f, 100.0f),
 };
 
 int main()
@@ -179,12 +180,10 @@ int main()
 
     // lightPositions, lightColors 설정 (반드시 shader 코드와 일치)
     ourShader.setVec3("lightPositions[0]", lightPositions[0]);
-    ourShader.setVec3("lightPositions[1]", lightPositions[1]);
     // 만약 나머지 2개 광원을 사용하지 않는다면 쉐이더에서 for문 범위를 2로 줄이거나
     // 아니면 positions[2], positions[3]에 임의의 값(또는 (0,0,0))을 넣어도 된다.
 
     ourShader.setVec3("lightColors[0]", lightColors[0]);
-    ourShader.setVec3("lightColors[1]", lightColors[1]);
     // 마찬가지로 나머지 2개 광원에 대한 부분도 정리.
 
     ourShader.setInt("albedoMap", 0);
@@ -192,9 +191,6 @@ int main()
     ourShader.setInt("metallicMap", 2);
     ourShader.setInt("roughnessMap", 3);
     ourShader.setInt("aoMap", 4);
-
-
-
 
 
     // load PBR material textures
@@ -205,16 +201,7 @@ int main()
     unsigned int roughness = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_Roughness.png").c_str());
     unsigned int ao = loadTexture(FileSystem::getPath("../resources/gear/textures/Gear_2_Diffuse.png").c_str());
 
-    // lights
-// ------
-    glm::vec3 lightPositions[] = {
-        glm::vec3(0.0f, 0.0f, 10.0f),
-        glm::vec3(15.0f, 15.0f, 10.0f),
-    };
-    glm::vec3 lightColors[] = {
-        glm::vec3(150.0f, 150.0f, 150.0f),
-        glm::vec3(100.0f, 100.0f, 100.0f),
-    };
+
     int nrRows = 7;
     int nrColumns = 7;
     float spacing = 2.5;
@@ -260,7 +247,7 @@ int main()
         float near_plane = 1.0f, far_plane = 7.5f;
         //lightProjection = glm::perspective(glm::radians(45.0f), (GLfloat)SHADOW_WIDTH / (GLfloat)SHADOW_HEIGHT, near_plane, far_plane); // note that if you use a perspective projection matrix you'll have to change the light position as the current light position isn't enough to reflect the whole scene
         lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, near_plane, far_plane);
-        lightView = glm::lookAt(lightPositions[0], glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
+        lightView = glm::lookAt(lightPositions[1], glm::vec3(0.0f), glm::vec3(0.0, 1.0, 0.0));
         lightSpaceMatrix = lightProjection * lightView;
         // render scene from light's point of view
         simpleDepthShader.use();
@@ -290,7 +277,6 @@ int main()
         // set light uniforms
         shader.setVec3("viewPos", camera.Position);
         shader.setVec3("lightPositions[0]", lightPositions[0]);
-        shader.setVec3("lightPositions[1]", lightPositions[1]);
         shader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, woodTexture);
